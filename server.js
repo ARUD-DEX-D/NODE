@@ -150,7 +150,7 @@ app.post('/close-ticket', async (req, res) => {
         SET 
           COMPLETED_TIME = @COMPLETED_TIME,
           USERID = @USERID,
-          STATUS = @STATUS
+          TKT_STATUS = @STATUS
         WHERE FACILITY_CKD_ROOMNO = @ROOMNO AND tkt_status != 1
       `);
 
