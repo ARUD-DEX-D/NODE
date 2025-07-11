@@ -142,11 +142,11 @@ app.post('/close-ticket', async (req, res) => {
     const result = await pool.request()
       .input('ROOMNO', sql.NVarChar(100), ROOMNO)
       .input('USERID', sql.NVarChar(100), USERID)
-      .input('COMPLETED_TIME', sql.DateTime, new Date())
+     
       .query(`
         UPDATE FACILITY_CHECK_DETAILS
         SET 
-          COMPLETED_TIME = @COMPLETED_TIME,
+          COMPLETED_TIME = (SELECT DATEADD(MINUTE, 330, GETUTCDATE()) AS CurrentIST),
           USERID = @USERID,
           TKT_STATUS = 1
         WHERE FACILITY_CKD_ROOMNO = @ROOMNO AND tkt_status != 1
