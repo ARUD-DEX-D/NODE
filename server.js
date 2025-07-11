@@ -50,7 +50,7 @@ app.post('/insert', async (req, res) => {
 app.get('/people', async (req, res) => {
   try {
     const pool = await sql.connect(dbConfig);
-    const result = await pool.request().query('select FACILITY_CKD_ROOMNO,FACILITY_CKD_DEPT,status from facility_check_details');
+    const result = await pool.request().query('select FACILITY_CKD_ROOMNO,FACILITY_CKD_DEPT,status,userid from facility_check_details');
     res.json(result.recordset);
   } catch (err) {
     console.error('❌ Fetch Error:', err);
