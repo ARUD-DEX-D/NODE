@@ -128,6 +128,44 @@ app.post('/login', async (req, res) => {
   }
 });
 
+
+// ✅ POST /complete-ticket
+app.post('/close-ticket', async (req, res) => {
+  const { ROOMNO, USERID } = req.body;
+
+  if (!ROOMNO || !USERID) {
+    return res.status(400).json({ error: 'ROOMNO and USERID are required' });
+  }
+
+  try {
+    const pool = await sql.connect(dbConfig);
+
+    await pool.request()
+      .input('ROOMNO', sql.NVarChar(100), ROOMNO)
+      .input('USERID', sql.NVarChar(100), USERID)
+      .input('COMPLETED_TIME', sql.DateTime, new Date())
+      .input('TKT_STATUS', sql.Int, 1) // 5 = SLA Completed
+      .query(`
+        UPDATE FACILITY_CHECK_DETAILS
+        SET 
+          COMPLETED_TIME = @COMPLETED_TIME,
+          USERID = @USERID,
+          STATUS = @STATUS
+        WHERE FACILITY_CKD_ROOMNO = @ROOMNO AND tkt_status != 1
+      `);
+
+  if (result.rowsAffected[0] === 0) {
+      return res.status(400).json({ message: 'Ticket is already closed or not found.' });
+    }
+
+    res.json({ success: true, message: 'Ticket completed and closed successfully.' });
+  } catch (err) {
+    console.error('❌ Complete Ticket Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 // ✅ Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running at http://0.0.0.0:${PORT}`);
