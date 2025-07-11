@@ -129,7 +129,6 @@ app.post('/login', async (req, res) => {
 });
 
 
-// ✅ POST /complete-ticket
 app.post('/close-ticket', async (req, res) => {
   const { ROOMNO, USERID } = req.body;
 
@@ -140,21 +139,20 @@ app.post('/close-ticket', async (req, res) => {
   try {
     const pool = await sql.connect(dbConfig);
 
-    await pool.request()
+    const result = await pool.request()
       .input('ROOMNO', sql.NVarChar(100), ROOMNO)
       .input('USERID', sql.NVarChar(100), USERID)
       .input('COMPLETED_TIME', sql.DateTime, new Date())
-      .input('TKT_STATUS', sql.Int, 1) // 5 = SLA Completed
       .query(`
         UPDATE FACILITY_CHECK_DETAILS
         SET 
           COMPLETED_TIME = @COMPLETED_TIME,
           USERID = @USERID,
-          TKT_STATUS = @TKT_STATUS
+          tkt_status = 1
         WHERE FACILITY_CKD_ROOMNO = @ROOMNO AND tkt_status != 1
       `);
 
-  if (result.rowsAffected[0] === 0) {
+    if (result.rowsAffected[0] === 0) {
       return res.status(400).json({ message: 'Ticket is already closed or not found.' });
     }
 
