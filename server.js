@@ -65,7 +65,7 @@ app.get('/person/:id', async (req, res) => {
     const pool = await sql.connect(dbConfig);
     const result = await pool.request()
       .input('id', sql.Int, id)
-      .query('SELECT * FROM login WHERE ID = @id');
+      .query('SELECT * FROM login WHERE USERID = @id');
 
     if (result.recordset.length === 0) {
       return res.status(404).json({ error: 'Person not found' });
