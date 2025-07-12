@@ -116,6 +116,7 @@ app.post('/login', async (req, res) => {
       const user = result.recordset[0];
       res.status(200).json({
         message: 'Login successful',
+        userid: user.USERID,
         name: user.USERNAME,
         department: user.DEPT
       });
