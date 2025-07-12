@@ -168,7 +168,7 @@ app.post('/close-ticket', async (req, res) => {
 
 
 app.post('/assign', async (req, res) => {
-  const { userid, assignTime, status, roomNo, department } = req.body;
+  const { userid,  status, roomNo, department } = req.body;
 
   try {
     const pool = await sql.connect(dbConfig);
