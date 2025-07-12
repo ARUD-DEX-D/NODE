@@ -164,6 +164,80 @@ app.post('/close-ticket', async (req, res) => {
 });
 
 
+
+
+
+app.post('/assign', async (req, res) => {
+  const { userid, assignTime, status, roomNo, department, forceReassign } = req.body;
+
+  try {
+    const pool = await sql.connect(dbConfig);
+
+    const result = await pool.request()
+      .input('roomNo', sql.NVarChar, roomNo)
+      .input('department', sql.NVarChar, department)
+      .query(`
+        SELECT STATUS, userid FROM FACILITY_CHECK_DETAILS
+        WHERE FACILITY_CKD_ROOMNO = @roomNo AND FACILITY_CKD_DEPT = @department
+      `);
+
+    if (result.recordset.length === 0) {
+      return res.status(404).send({ error: 'Record not found' });
+    }
+
+    const current = result.recordset[0];
+
+    if (current.STATUS === 0 || current.STATUS === null) {
+      // ✅ First-time assign
+      await pool.request()
+        .input('userid', sql.NVarChar, userid)
+        .input('assignTime', sql.DateTime, assignTime)
+        .input('status', sql.Int, status)
+        .input('roomNo', sql.NVarChar, roomNo)
+        .input('department', sql.NVarChar, department)
+        .query(`
+          UPDATE FACILITY_CHECK_DETAILS
+          SET ASSIGNED_TIME = @assignTime,
+              STATUS = @status,
+              userid = @userid
+          WHERE FACILITY_CKD_ROOMNO = @roomNo AND FACILITY_CKD_DEPT = @department
+        `);
+
+      return res.send({ success: true, message: 'Assigned successfully.' });
+
+    } else if (current.STATUS === 1 && !forceReassign) {
+      // ⚠️ Already assigned - ask user if they want to reassign
+      return res.send({
+        alreadyAssigned: true,
+        currentUser: current.userid?.trim() || 'Unknown',
+        message: `Already assigned to ${current.userid?.trim()}. Do you want to reassign?`
+      });
+
+    } else if (current.STATUS === 1 && forceReassign) {
+      // ✅ Reassign (only user ID)
+      await pool.request()
+        .input('userid', sql.NVarChar, userid)
+        .input('roomNo', sql.NVarChar, roomNo)
+        .input('department', sql.NVarChar, department)
+        .query(`
+          UPDATE FACILITY_CHECK_DETAILS
+          SET userid = @userid
+          WHERE FACILITY_CKD_ROOMNO = @roomNo AND FACILITY_CKD_DEPT = @department
+        `);
+
+      return res.send({ success: true, message: 'User reassigned.' });
+
+    } else {
+      // ❌ Completed or breached - deny
+      return res.status(400).send({ error: 'Cannot assign. Task already completed or breached.' });
+    }
+
+  } catch (err) {
+    res.status(500).send({ error: err.message });
+  }
+});
+
+
 // ✅ Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running at http://0.0.0.0:${PORT}`);
