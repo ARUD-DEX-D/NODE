@@ -168,7 +168,7 @@ app.post('/close-ticket', async (req, res) => {
 
 
 app.post('/assign', async (req, res) => {
-  const { userid,  status, roomNo, department } = req.body;
+  const { userid, status, roomNo, department, forceReassign } = req.body;
 
   try {
     const pool = await sql.connect(dbConfig);
@@ -195,24 +195,25 @@ app.post('/assign', async (req, res) => {
         .input('department', sql.NVarChar, department)
         .query(`
           UPDATE FACILITY_CHECK_DETAILS
-          SET ASSIGNED_TIME = (SELECT DATEADD(MINUTE, 330, GETUTCDATE()) AS CurrentIST,
-              STATUS = 1,
-              userid = @userid
+          SET 
+            ASSIGNED_TIME = DATEADD(MINUTE, 330, GETUTCDATE()),
+            STATUS = 1,
+            userid = @userid
           WHERE FACILITY_CKD_ROOMNO = @roomNo AND FACILITY_CKD_DEPT = @department
         `);
 
       return res.send({ success: true, message: 'Assigned successfully.' });
 
-    } else if (current.STATUS !== 0) {
-      // ⚠️ Already assigned - ask user if they want to reassign
+    } else if (current.STATUS === 1 && !forceReassign) {
+      // ⚠️ Already assigned - prompt reassign
       return res.send({
         alreadyAssigned: true,
         currentUser: current.userid?.trim() || 'Unknown',
         message: `Already assigned to ${current.userid?.trim()}. Do you want to reassign?`
       });
 
-    } else if (current.STATUS  !== 0) {
-      // ✅ Reassign (only user ID)
+    } else if (current.STATUS === 1 && forceReassign) {
+      // ✅ Reassign (update only userid)
       await pool.request()
         .input('userid', sql.NVarChar, userid)
         .input('roomNo', sql.NVarChar, roomNo)
@@ -226,14 +227,14 @@ app.post('/assign', async (req, res) => {
       return res.send({ success: true, message: 'User reassigned.' });
 
     } else {
-      // ❌ Completed or breached - deny
-      return res.status(400).send({ error: 'Cannot assign. Task already completed or breached.' });
+      return res.status(400).send({ error: 'Cannot assign. Task already completed or SLA breached.' });
     }
 
   } catch (err) {
     res.status(500).send({ error: err.message });
   }
 });
+
 
 
 // ✅ Start server
