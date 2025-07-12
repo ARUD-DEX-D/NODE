@@ -168,7 +168,7 @@ app.post('/close-ticket', async (req, res) => {
 
 
 app.post('/assign', async (req, res) => {
-  const { userid, assignTime, status, roomNo, department, forceReassign } = req.body;
+  const { userid, assignTime, status, roomNo, department } = req.body;
 
   try {
     const pool = await sql.connect(dbConfig);
@@ -191,21 +191,19 @@ app.post('/assign', async (req, res) => {
       // ✅ First-time assign
       await pool.request()
         .input('userid', sql.NVarChar, userid)
-        .input('assignTime', sql.DateTime, assignTime)
-        .input('status', sql.Int, status)
         .input('roomNo', sql.NVarChar, roomNo)
         .input('department', sql.NVarChar, department)
         .query(`
           UPDATE FACILITY_CHECK_DETAILS
-          SET ASSIGNED_TIME = @assignTime,
-              STATUS = @status,
+          SET ASSIGNED_TIME = (SELECT DATEADD(MINUTE, 330, GETUTCDATE()) AS CurrentIST,
+              STATUS = 1,
               userid = @userid
           WHERE FACILITY_CKD_ROOMNO = @roomNo AND FACILITY_CKD_DEPT = @department
         `);
 
       return res.send({ success: true, message: 'Assigned successfully.' });
 
-    } else if (current.STATUS === 1 && !forceReassign) {
+    } else if (current.STATUS !== 0) {
       // ⚠️ Already assigned - ask user if they want to reassign
       return res.send({
         alreadyAssigned: true,
@@ -213,7 +211,7 @@ app.post('/assign', async (req, res) => {
         message: `Already assigned to ${current.userid?.trim()}. Do you want to reassign?`
       });
 
-    } else if (current.STATUS === 1 && forceReassign) {
+    } else if (current.STATUS  !== 0) {
       // ✅ Reassign (only user ID)
       await pool.request()
         .input('userid', sql.NVarChar, userid)
