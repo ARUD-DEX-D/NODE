@@ -206,11 +206,12 @@ app.post('/assign', async (req, res) => {
 
     } else if (current.STATUS === 1 && !forceReassign) {
       // ⚠️ Already assigned - prompt reassign
-      return res.send({
-        alreadyAssigned: true,
-        currentUser: current.userid?.trim() || 'Unknown',
-        message: `Already assigned to ${current.userid?.trim()}. Do you want to reassign?`
-      });
+     return res.send({
+  alreadyAssigned: true,
+  currentUser: (current.userid ?? '').toString().trim(),
+  message: `Already assigned to ${(current.userid ?? '').toString().trim()}. Do you want to reassign?`
+});
+
 
     } else if (current.STATUS === 1 && forceReassign) {
       // ✅ Reassign (update only userid)
